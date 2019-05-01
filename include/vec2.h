@@ -10,6 +10,11 @@ public:
 
   float& at(int index);
 
+  float mag();
+  Vec2 normalize();
+
+  void rotate(float dTheta);
+
   Vec2 operator * (float& other);
 private:
   float nums[2];
