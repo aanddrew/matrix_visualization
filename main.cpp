@@ -3,9 +3,160 @@
 
 #include "include/mat2.h"
 #include "include/vec2.h"
+#include "include/menu.h"
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
+
+void renderVector(sf::RenderWindow& window, Vec2& vec, sf::Color color, float scale);
+void renderGrid(sf::RenderWindow& window, float scale, sf::Vector2i origin);
+
+int main()
+{
+  sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH,SCREEN_HEIGHT), "Vector Visualization");
+  window.setVerticalSyncEnabled(false);
+
+  sf::ContextSettings settings;
+  settings.antialiasingLevel = 4;
+
+  sf::Event e;
+
+  Vec2 vec(3,1);
+
+  sf::Clock clock;
+  sf::Time dt;
+
+  float scale = 100;
+
+  sf::Vector2i mousePos;
+  sf::Vector2i origin = sf::Vector2i(window.getSize().x/2, window.getSize().y/2);
+
+  bool viewMoving = false;
+
+  Menu menu(window, "resources/arial.ttf");
+
+  sf::Text* selectedTextBox = nullptr;
+
+  while(window.isOpen())
+  {
+    dt = clock.restart();
+    // std::cout << "fps: " << (1.0/(dt.asSeconds())) << std::endl;
+
+    while(window.pollEvent(e))
+    {
+      switch(e.type)
+      {
+        case sf::Event::Closed:
+          window.close();
+        break;
+        //resize the window
+        case sf::Event::Resized:
+        {
+            // update the view to the new size of the window
+            sf::FloatRect visibleArea(0, 0, e.size.width, e.size.height);
+            window.setView(sf::View(visibleArea));
+        } break;
+        
+        case sf::Event::MouseWheelMoved:
+        {
+            // display number of ticks mouse wheel has moved
+            // std::cout << e.mouseWheel.delta << '\n';
+            scale += e.mouseWheel.delta*10;
+            if (scale <= 10) scale = 10;
+        }break;
+        //GRID MOVING LOGIC
+        case sf::Event::MouseButtonPressed:
+        {
+          selectedTextBox = menu.selectTextBox(sf::Mouse::getPosition(window));
+          if (selectedTextBox != nullptr)
+          {
+          }
+          else
+          {
+            if (!viewMoving)
+              mousePos = sf::Mouse::getPosition();
+            viewMoving = true;
+          }
+          // origin += (mousePos - sf::Mouse::getPosition());
+        }break;
+        case sf::Event::MouseButtonReleased:
+        {
+          if (viewMoving)
+          {
+            viewMoving = false;
+            origin += (mousePos - sf::Mouse::getPosition());
+          }
+        }break;
+        //END GRID MOVING
+        case sf::Event::TextEntered:
+        {
+          //TEXT BOX LOGIC
+          if (selectedTextBox != nullptr)
+          {
+            if (e.text.unicode == '\b')
+            {
+              selectedTextBox->setString(selectedTextBox->getString().substring(0, selectedTextBox->getString().getSize()-1));
+            }
+            else if (e.text.unicode == '\r')
+            {
+              float num;
+              bool valid = true;
+              try
+              {
+                num = std::stof(selectedTextBox->getString().toAnsiString());
+              }
+              catch(const std::exception& e)
+              {
+                valid = false;
+              }
+
+              if (valid)
+              {
+                if (menu.getTextBoxProperty(selectedTextBox) == "x")
+                  vec.at(0) = num;
+                if (menu.getTextBoxProperty(selectedTextBox) == "y")
+                  vec.at(1) = num;
+              }
+
+              selectedTextBox->setString("");
+            }
+            else
+            {
+              selectedTextBox->setString(selectedTextBox->getString() + e.text.unicode);
+            }
+          }
+          //END TEXT BOX LOGIC
+        }break;
+      }
+    }
+    sf::Vector2i deltaMove = mousePos - sf::Mouse::getPosition();
+    //this is so that we can move around the world view
+    sf::View tempView = window.getView();
+    tempView.setCenter((float)origin.x, (float)origin.y);
+    if (viewMoving)
+    {
+      tempView.move((sf::Vector2f) deltaMove);
+    }
+    window.setView(tempView);
+
+    //animation of vector rotating
+    // vec.rotate(64*dt.asSeconds());
+
+    //rendering sequence
+    window.clear();
+    sf::Vector2i tempOrigin = origin;
+    if (viewMoving)
+      tempOrigin += deltaMove;
+    //grid
+    renderGrid(window, scale, tempOrigin);
+    //then vector
+    renderVector(window, vec, sf::Color::Yellow, scale);
+    //then menu/hud
+    window.setView(window.getDefaultView());
+    window.draw(menu);
+    window.display();
+  }
+}
 
 void renderVector(sf::RenderWindow& window, Vec2& vec, sf::Color color, float scale)
 {
@@ -18,7 +169,7 @@ void renderVector(sf::RenderWindow& window, Vec2& vec, sf::Color color, float sc
   window.draw(line, 2, sf::Lines);
 
   //this is our triangle, originally pointing on the x axis -->
-  Vec2 triangle[] = {Vec2(1,0), Vec2(0.9, 0.04), Vec2(0.9,-0.04)};
+  Vec2 triangle[] = {Vec2(1,0), Vec2(0.9, 0.03), Vec2(0.9,-0.03)};
 
   //now we create a transformation matrix out of the Vector that we are drawing
   //and multiply all the vertices in the triangle by this transformation matrix
@@ -51,8 +202,6 @@ void renderGrid(sf::RenderWindow& window, float scale, sf::Vector2i origin)
   float halfHeight = window.getSize().y/2;
   float halfWidth = window.getSize().x/2;
   origin.x -= halfWidth; origin.y -= halfHeight;
-
-  std::cout << "origin x: " << origin.x << " y: " << origin.y << std::endl;
 
   //scale is how big 1 unit is - ie if it is 300, 1 unit of the graph is 300 px
   int numVertLines = (window.getSize().x/2 + abs(origin.x)) /scale + 1;
@@ -120,89 +269,3 @@ void renderGrid(sf::RenderWindow& window, float scale, sf::Vector2i origin)
   window.draw(xAxis, 2, sf::Lines);
 }
 
-int main()
-{
-  sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH,SCREEN_HEIGHT), "Vector Visualization");
-  window.setVerticalSyncEnabled(false);
-
-  sf::Event e;
-
-  Vec2 vec(1,2);
-
-  sf::Clock clock;
-  sf::Time dt;
-
-  float scale = 100;
-
-  sf::Vector2i mousePos;
-  sf::Vector2i origin = sf::Vector2i(window.getSize().x/2, window.getSize().y/2);
-
-  bool viewMoving = false;
-
-  while(window.isOpen())
-  {
-    dt = clock.restart();
-    // std::cout << "fps: " << (1.0/(dt.asSeconds())) << std::endl;
-
-    while(window.pollEvent(e))
-    {
-      switch(e.type)
-      {
-        case sf::Event::Closed:
-          window.close();
-        break;
-        //resize the window
-        case sf::Event::Resized:
-        {
-            // update the view to the new size of the window
-            sf::FloatRect visibleArea(0, 0, e.size.width, e.size.height);
-            window.setView(sf::View(visibleArea));
-        } break;
-        case sf::Event::MouseWheelMoved:
-        {
-            // display number of ticks mouse wheel has moved
-            // std::cout << e.mouseWheel.delta << '\n';
-            scale += e.mouseWheel.delta*10;
-            if (scale <= 10) scale = 10;
-        }break;
-        case sf::Event::MouseButtonPressed:
-        {
-          if (!viewMoving)
-            mousePos = sf::Mouse::getPosition();
-          viewMoving = true;
-          // origin += (mousePos - sf::Mouse::getPosition());
-        }break;
-        case sf::Event::MouseButtonReleased:
-        {
-          viewMoving = false;
-          origin += (mousePos - sf::Mouse::getPosition());
-        }break;
-        case sf::Event::TextEntered:
-        {
-
-        }break;
-      }
-    }
-    sf::Vector2i deltaMove = mousePos - sf::Mouse::getPosition();
-    //this is so that we can move around the world view
-    sf::View tempView = window.getView();
-    tempView.setCenter((float)origin.x, (float)origin.y);
-    if (viewMoving)
-    {
-      tempView.move((sf::Vector2f) deltaMove);
-    }
-    window.setView(tempView);
-
-    //animation of vector rotating
-    vec.rotate(34*dt.asSeconds());
-
-    //rendering sequence
-    window.clear();
-    sf::Vector2i tempOrigin = origin;
-    if (viewMoving)
-      tempOrigin += deltaMove;
-    renderGrid(window, scale, tempOrigin);
-    renderVector(window, vec, sf::Color::Yellow, scale);
-    window.display();
-  }
-}

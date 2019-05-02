@@ -1,5 +1,5 @@
 #the files to compile as part of project
-OBJS = main.cpp res/mat2.cpp res/vec2.cpp
+OBJS = main.cpp res/mat2.cpp res/vec2.cpp res/menu.cpp
 
 #the compiler we will use
 CC = g++

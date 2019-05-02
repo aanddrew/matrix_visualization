@@ -2,6 +2,7 @@
 
 #include "include/mat2.h"
 #include "include/vec2.h"
+#include "app.h"
 
 void printMat(Mat2& mat)
 {
@@ -43,6 +44,9 @@ int main()
 
   Vec2 vecMul2 = mat_1*vec;
   printVec(vecMul2);
+
+  App app;
+  app.run();
 
   return 0;
 }
