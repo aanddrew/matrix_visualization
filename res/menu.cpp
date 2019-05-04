@@ -5,7 +5,7 @@
 
 Menu::Menu(const sf::RenderWindow& window, const std::string& fileName)
 :
-dimensions(100,150),
+dimensions(110,150),
 pos(50, window.getSize().y-200),
 font(),
 topText(),

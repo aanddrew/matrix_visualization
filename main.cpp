@@ -4,11 +4,12 @@
 #include "include/mat2.h"
 #include "include/vec2.h"
 #include "include/menu.h"
+#include "include/transformMenu.h"
 
-#define SCREEN_WIDTH 800
-#define SCREEN_HEIGHT 600
+#define SCREEN_WIDTH 1024
+#define SCREEN_HEIGHT 768
 
-void renderVector(sf::RenderWindow& window, Vec2& vec, sf::Color color, float scale);
+void renderVector(sf::RenderWindow& window, Mat2& mat, Vec2 vec, sf::Color color, float scale);
 void renderGrid(sf::RenderWindow& window, float scale, sf::Vector2i origin);
 
 int main()
@@ -22,6 +23,7 @@ int main()
   sf::Event e;
 
   Vec2 vec(3,1);
+  Mat2 mat(1,0,0,1);
 
   sf::Clock clock;
   sf::Time dt;
@@ -34,6 +36,7 @@ int main()
   bool viewMoving = false;
 
   Menu menu(window, "resources/arial.ttf");
+  TransformMenu transformMenu(window, "resources/arial.ttf");
 
   sf::Text* selectedTextBox = nullptr;
 
@@ -68,6 +71,8 @@ int main()
         case sf::Event::MouseButtonPressed:
         {
           selectedTextBox = menu.selectTextBox(sf::Mouse::getPosition(window));
+          if (selectedTextBox == nullptr)
+            selectedTextBox = transformMenu.selectTextBox(sf::Mouse::getPosition(window));
           if (selectedTextBox != nullptr)
           {
           }
@@ -110,15 +115,30 @@ int main()
                 valid = false;
               }
 
+              bool resetBox = false;
               if (valid)
               {
                 if (menu.getTextBoxProperty(selectedTextBox) == "x")
+                {
                   vec.at(0) = num;
+                  resetBox = true;
+                }
                 if (menu.getTextBoxProperty(selectedTextBox) == "y")
+                {
                   vec.at(1) = num;
+                  resetBox = true;
+                }
+                std::string val = transformMenu.getTextBoxProperty(selectedTextBox);
+                if (val != "null")
+                {
+                  int row = val[0] - '0';
+                  int col = val[1] - '0';
+                  printf("row: %d, col: %d\n", row, col);
+                  mat.at(row, col) = num;
+                }
               }
-
-              selectedTextBox->setString("");
+              if (resetBox)
+                selectedTextBox->setString("");
             }
             else
             {
@@ -150,16 +170,18 @@ int main()
     //grid
     renderGrid(window, scale, tempOrigin);
     //then vector
-    renderVector(window, vec, sf::Color::Yellow, scale);
+    renderVector(window, mat, vec, sf::Color::Yellow, scale);
     //then menu/hud
     window.setView(window.getDefaultView());
     window.draw(menu);
+    window.draw(transformMenu);
     window.display();
   }
 }
 
-void renderVector(sf::RenderWindow& window, Vec2& vec, sf::Color color, float scale)
+void renderVector(sf::RenderWindow& window, Mat2& mat, Vec2 vec, sf::Color color, float scale)
 {
+  vec = mat*vec;
   //this line is the vector that we are currently drawing
   sf::Vertex line[] = {sf::Vertex(sf::Vector2f(window.getSize().x/2, window.getSize().y/2)), 
                        sf::Vertex(sf::Vector2f(window.getSize().x/2 + vec.at(0)*scale, window.getSize().y/2 - vec.at(1)*scale))};
@@ -182,6 +204,7 @@ void renderVector(sf::RenderWindow& window, Vec2& vec, sf::Color color, float sc
   {
     triangle[i] = triangle[i]*scale;
     triangle[i] = transform*triangle[i];
+    // triangle[i] = mat*triangle[i];
     // std::cout << "Triangle vertex " << i << ": " << "(" << triangle[i].at(0) << ", " << triangle[i].at(1) << ")" << std::endl;
   }
 
